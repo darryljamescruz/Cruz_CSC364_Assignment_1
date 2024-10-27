@@ -292,12 +292,12 @@ def processing_thread(connection, ip, port, forwarding_table_with_range, default
 
         if sending_port == '127.0.0.1':
             print("OUT:", payload)
-            write_to_file('out_router_3.txt', payload)
+            write_to_file('./output/out_router_3.txt', payload)
         else:
             print("DISCARD:", new_packet)
-            write_to_file('discarded_by_router_3.txt', new_packet)
+            write_to_file('./output/discarded_by_router_3.txt', new_packet)
 # Main Program
 
 if __name__ == "__main__":
     # 1. Start the server.
-    start_server()  # Start the server for Router 2 to listen for connections
+    start_server()  # Start the server for Router 3 to listen for connections
