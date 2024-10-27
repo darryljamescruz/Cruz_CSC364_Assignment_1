@@ -220,8 +220,8 @@ if __name__ == "__main__":
         sending_port = None
         for entry in forwarding_table_with_range:
             print("DEBUG: entry = ", entry)
-            min_ip = int(entry[0], 2)
-            max_ip = int(entry[1], 2)
+            min_ip = entry[0]
+            max_ip = entry[1]
             if min_ip <= destinationIP_int <= max_ip:
                 sending_port = entry[3]     #send new packet to appropriate port
 
