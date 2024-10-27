@@ -122,13 +122,14 @@ def find_ip_range(network_dst, netmask):
     # to get the minimum IP address in the range.
     network_dst_int = int(network_dst, 2)
     netmask_int = int(netmask, 2)
+    
     bitwise_and = network_dst_int & netmask_int
 
     # 2. Perform a bitwise NOT on the netmask
     # to get the number of total IPs in this range.
     # Because the built-in bitwise NOT or compliment operator (~) works with signed ints,
     # we need to create our own bitwise NOT operator for our unsigned int (a netmask).
-    compliment = (~netmask_int) & 0xFFFFFFFF  # 32-bit mask for unsigned int
+    compliment = bit_not(netmask_int, numbits=32)
 
     # 3. Add the total number of IPs to the minimum IP
     # to get the maximum IP address in the range.
@@ -167,7 +168,7 @@ def receive_packet(connection, max_buffer_size):
 
     # 4. Append the packet to received_by_router_2.txt.
     print("received packet", decoded_packet)
-    with open('received_by_router_2.txt', 'a') as f:
+    with open('./output/received_by_router_2.txt', 'a') as f:
         f.write(decoded_packet + '\n')
 
     # 5. Split the packet by the delimiter.
@@ -201,6 +202,7 @@ def start_server():
     host = "127.0.0.1"  # localhost
     port = 8002         # the port router 2 will listen on
     soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
     soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     print("Socket created")
 
@@ -216,7 +218,7 @@ def start_server():
     print("Socket now listening")
 
     # 4. Read in and store the forwarding table.
-    forwarding_table = read_csv("router_2_table.csv")
+    forwarding_table = read_csv("./input/router_2_table.csv")
 
     # 5. Store the default gateway port.
     default_gateway_port = find_default_gateway(forwarding_table)
@@ -247,12 +249,9 @@ def processing_thread(connection, ip, port, forwarding_table_with_range, default
     while True:
         # 3. Receive the incoming packet, process it, and store its list representation
         packet = receive_packet(connection, max_buffer_size)
-        print("DEBUG: FINISHED RECEIVE PACKET FUNCTION")
         # 4. If the packet is empty (Router 1 has finished sending all packets), break out of the processing loop
         if not packet:
-            print("DEBUG: SOMETHING FUCKED UP")
             break
-        print("DEBUG: PACKET SUCCESSFULLY RECIEVED")
         # 5. Store the source IP, destination IP, payload, and TTL.
         sourceIP = packet[0]
         destinationIP = packet[1]
@@ -263,7 +262,7 @@ def processing_thread(connection, ip, port, forwarding_table_with_range, default
         new_ttl = ttl - 1
         if new_ttl <= 0:
             # TTL has expired, discard the packet
-            write_to_file('discarded_by_router_2.txt', ','.join(packet))
+            write_to_file('./output/discarded_by_router_2.txt', ','.join(packet))
             print("DISCARD:", packet)
             continue
         
@@ -276,8 +275,8 @@ def processing_thread(connection, ip, port, forwarding_table_with_range, default
         # 8. Find the appropriate sending port to forward this new packet to.
         sending_port = None
         for entry in forwarding_table_with_range:
-            min_ip = int(entry[0], 2)
-            max_ip = int(entry[1], 2)
+            min_ip = entry[0]
+            max_ip = entry[1]
             if min_ip <= destinationIP_int <= max_ip:
                 sending_port = entry[3]
                 break
@@ -292,26 +291,24 @@ def processing_thread(connection, ip, port, forwarding_table_with_range, default
         # (c) append the new packet to discarded_by_router_2.txt and do not forward the new packet
         if str(sending_port) == '8003':
             print("sending packet", new_packet, "to Router 3")
-            write_to_file('sent_by_router_2.txt', new_packet, send_to_router="3")
+            write_to_file('./output/sent_by_router_2.txt', new_packet, send_to_router="3")
             router_3_socket = create_socket("127.0.0.1", 8003)
             router_3_socket.sendall(new_packet.encode('utf-8'))
             router_3_socket.close()
         elif str(sending_port) == '8004':
-            print("sending p-acket", new_packet, "to Router 4")
-            write_to_file('sent_by_router_2.txt', new_packet, send_to_router="4")
+            print("sending packet", new_packet, "to Router 4")
+            write_to_file('./output/sent_by_router_2.txt', new_packet, send_to_router="4")
             router_4_socket = create_socket("127.0.0.1", 8004)
             router_4_socket.sendall(new_packet.encode('utf-8'))
             router_4_socket.close()
         elif sending_port == '127.0.0.1':
             print("OUT:", payload)
-            write_to_file('out_router_2.txt', payload)
+            write_to_file('./output/out_router_2.txt', payload)
         else:
             print("DISCARD:", new_packet)
-            write_to_file('discarded_by_router_2.txt', new_packet)
-    print("DEBUG: the while loop was broken out of.", packet)
+            write_to_file('./output/discarded_by_router_2.txt', new_packet)
 
 # Main Program
-
 if __name__ == "__main__":
     # 1. Start the server.
     start_server()  # Start the server for Router 2 to listen for connections
